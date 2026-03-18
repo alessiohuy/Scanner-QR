@@ -1,1 +1,153 @@
-const PASSWORD = "scanner-QR-crecker";
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scanner QR</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    h2 { margin-bottom: 16px; color: #333; }
+    #login-box {
+      background: white;
+      padding: 32px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 320px;
+    }
+    #login-box h2 { margin-bottom: 24px; }
+    #login-box input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1em;
+      margin-bottom: 12px;
+      text-align: center;
+      letter-spacing: 4px;
+    }
+    #login-error {
+      color: red;
+      font-size: 0.9em;
+      margin-bottom: 10px;
+      min-height: 20px;
+    }
+    #scanner-box { display: none; width: 100%; }
+    video {
+      width: 100%;
+      max-width: 400px;
+      border-radius: 12px;
+      background: #000;
+    }
+    canvas { display: none; }
+    #result {
+      margin-top: 16px;
+      font-size: 1.1em;
+      color: #1a73e8;
+      font-weight: bold;
+      word-break: break-all;
+      padding: 10px;
+    }
+    button {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1em;
+      width: 100%;
+    }
+    button:hover { background: #1558b0; }
+    #logout-btn {
+      margin-top: 20px;
+      background: #aaa;
+      max-width: 400px;
+    }
+    #logout-btn:hover { background: #888; }
+  </style>
+</head>
+<body>
+
+  <div id="login-box">
+    <h2>🔒 Accesso richiesto</h2>
+    <input type="password" id="password-input" placeholder="Inserisci password" />
+    <p id="login-error"></p>
+    <button onclick="checkPassword()">Entra</button>
+  </div>
+
+  <div id="scanner-box">
+    <h2>📷 Scanner QR Code</h2>
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <p id="result">In attesa di scansione...</p>
+    <button id="logout-btn" onclick="logout()">🔓 Esci</button>
+  </div>
+
+  <script>
+    const PASSWORD = "scanner-QR-crecker";
+
+    function checkPassword() {
+      const input = document.getElementById('password-input').value;
+      if (input === PASSWORD) {
+        document.getElementById('login-box').style.display = 'none';
+        document.getElementById('scanner-box').style.display = 'block';
+        startScanner();
+      } else {
+        document.getElementById('login-error').textContent = '❌ Password errata, riprova.';
+        document.getElementById('password-input').value = '';
+      }
+    }
+
+    document.getElementById('password-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') checkPassword();
+    });
+
+    function logout() {
+      location.reload();
+    }
+
+    function startScanner() {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      }).then(stream => {
+        video.srcObject = stream;
+        video.play();
+        requestAnimationFrame(scan);
+      }).catch(err => {
+        document.getElementById('result').textContent = '❌ Errore fotocamera: ' + err.message;
+      });
+
+      function scan() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code) {
+            document.getElementById('result').textContent = '✅ ' + code.data;
+          }
+        }
+        requestAnimationFrame(scan);
+      }
+    }
+  </script>
+</body>
+</html>
